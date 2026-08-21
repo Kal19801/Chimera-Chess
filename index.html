@@ -114,6 +114,7 @@
     .double-banner.active { display: flex; }
 
     .board-frame {
+        position: relative;
         border: clamp(3px, 0.8vw, 6px) solid var(--board-edge);
         box-shadow: 0 3px 10px rgba(0,0,0,0.35);
         width: 100%;
@@ -330,6 +331,39 @@
         padding: 0 3px;
         font-size: 0.76rem;
     }
+
+    /* 升变选择弹窗 */
+    .promo-overlay {
+        display: none;
+        position: absolute;
+        z-index: 20;
+        background: rgba(44, 36, 24, 0.45);
+        border-radius: 3px;
+        padding: 4px;
+    }
+    .promo-overlay.active { display: flex; gap: 4px; }
+    .promo-overlay .promo-btn {
+        width: clamp(38px, 6.5vw, 56px);
+        height: clamp(38px, 6.5vw, 56px);
+        background: var(--panel);
+        border: 2px solid var(--panel-border);
+        border-radius: 3px;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 4px;
+        transition: border-color 0.15s, background 0.15s;
+    }
+    .promo-overlay .promo-btn:hover {
+        border-color: var(--accent);
+        background: #ede7d6;
+    }
+    .promo-overlay .promo-btn svg {
+        width: 100%;
+        height: 100%;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45));
+    }
 </style>
 </head>
 <body>
@@ -354,7 +388,7 @@
                 </span>
             </div>
 
-            <div class="board-frame"><div id="board" class="board"></div></div>
+            <div class="board-frame"><div id="board" class="board"></div><div id="promoOverlay" class="promo-overlay"></div></div>
             <div id="materialLine" class="material-line"></div>
         </div>
 
@@ -508,6 +542,7 @@ let isRemoteMove = false;
 
 const $ = id => document.getElementById(id);
 const boardEl = $('board');
+const promoOverlayEl = $('promoOverlay');
 
 function inBounds(r, c) { return r >= 0 && r < 8 && c >= 0 && c < 12; }
 function cloneBoard(b) {
@@ -785,11 +820,11 @@ function applyMove(b, m) {
     let nextEp = null;
 
     if (m.type === 'double') {
-        const r1 = executeSingleStep(b, m.from[0], m.from[1], m.mid[0], m.mid[1], m.step1Fusion, m.step1Type, m.step1CapturePos, m.step1RookFrom, m.step1RookTo);
-        const r2 = executeSingleStep(b, m.mid[0], m.mid[1], m.to[0], m.to[1], m.step2Fusion, m.step2Type, m.step2CapturePos, m.step2RookFrom, m.step2RookTo);
+        const r1 = executeSingleStep(b, m.from[0], m.from[1], m.mid[0], m.mid[1], m.step1Fusion, m.step1Type, m.step1CapturePos, m.step1RookFrom, m.step1RookTo, m.promoChoice);
+        const r2 = executeSingleStep(b, m.mid[0], m.mid[1], m.to[0], m.to[1], m.step2Fusion, m.step2Type, m.step2CapturePos, m.step2RookFrom, m.step2RookTo, m.promoChoice);
         m.promoted = r1.promoted || r2.promoted;
     } else {
-        const res = executeSingleStep(b, fr, fc, m.to[0], m.to[1], m.isFusion, m.type, m.capturePos, m.rookFrom, m.rookTo);
+        const res = executeSingleStep(b, fr, fc, m.to[0], m.to[1], m.isFusion, m.type, m.capturePos, m.rookFrom, m.rookTo, m.promoChoice);
         m.promoted = res.promoted;
         if (m.isDoublePawn) {
             nextEp = { r: (fr + m.to[0]) / 2, c: fc, pawnPos: [m.to[0], m.to[1]] };
@@ -798,7 +833,7 @@ function applyMove(b, m) {
     return nextEp;
 }
 
-function executeSingleStep(b, fr, fc, tr, tc, isFusion, type, capturePos, rookFrom, rookTo) {
+function executeSingleStep(b, fr, fc, tr, tc, isFusion, type, capturePos, rookFrom, rookTo, promoChoice) {
     const p = b[fr][fc];
     b[fr][fc] = null;
 
@@ -821,7 +856,7 @@ function executeSingleStep(b, fr, fc, tr, tc, isFusion, type, capturePos, rookFr
     let promoted = false;
     const promoRank = p.color === 'w' ? 0 : 7;
     if (tr === promoRank && comps.includes('P')) {
-        comps = comps.map(x => x === 'P' ? 'Q' : x).sort((a, z) => VALUES[z] - VALUES[a]);
+        comps = comps.map(x => x === 'P' ? (promoChoice || 'Q') : x).sort((a, z) => VALUES[z] - VALUES[a]);
         promoted = true;
     }
 
@@ -1018,6 +1053,51 @@ function bareKings() {
     return true;
 }
 
+// ==================== 升变选择 ====================
+let promoCallback = null; // 升变选择后的回调
+
+function wouldPromote(m) {
+    const p = board[m.from[0]][m.from[1]];
+    if (!p || !p.comps.includes('P')) return false;
+    const promoRank = p.color === 'w' ? 0 : 7;
+    if (m.type === 'double') {
+        if (m.to[0] === promoRank || m.mid[0] === promoRank) return true;
+    } else {
+        if (m.to[0] === promoRank) return true;
+    }
+    return false;
+}
+
+function showPromoDialog(m, color, destR, destC, onChoose) {
+    promoCallback = onChoose;
+    promoOverlayEl.innerHTML = '';
+    ['Q', 'R', 'B', 'N'].forEach(comp => {
+        const btn = document.createElement('div');
+        btn.className = 'promo-btn';
+        btn.innerHTML = getPieceSVG(comp, color);
+        btn.addEventListener('click', () => {
+            hidePromoDialog();
+            m.promoChoice = comp;
+            onChoose(m);
+        });
+        promoOverlayEl.appendChild(btn);
+    });
+    // 定位到目标格上方/下方
+    const frameRect = document.querySelector('.board-frame').getBoundingClientRect();
+    const sqW = frameRect.width / 12;
+    const sqH = frameRect.height / 8;
+    const isTop = destR === 0;
+    promoOverlayEl.style.left = (destC * sqW) + 'px';
+    promoOverlayEl.style.top = isTop ? (destR * sqH) : ((destR - 3) * sqH);
+    promoOverlayEl.classList.add('active');
+}
+
+function hidePromoDialog() {
+    promoOverlayEl.classList.remove('active');
+    promoOverlayEl.innerHTML = '';
+    promoCallback = null;
+}
+
 // ==================== 走子提交 ====================
 function playMoveSound(m) {
     const isF = m.isFusion || m.step1Fusion || m.step2Fusion;
@@ -1055,7 +1135,7 @@ function commitMove(m) {
 
 // ==================== 交互流程 ====================
 function onSquareClick(r, c) {
-    if (isGameOver || isAiTurn() || aiThinking) return;
+    if (isGameOver || isAiTurn() || aiThinking || promoCallback) return;
     if (mode === 'online') {
         if (!netConn || !netConn.open || turn !== myOnlineColor) return;
     }
@@ -1072,14 +1152,20 @@ function onSquareClick(r, c) {
         if (matched.length) {
             const immediate = matched.find(m => m.type !== 'double');
             const targetRoyal = p && p.color !== turn && p.comps.includes('K');
-            if (targetRoyal && immediate) { commitMove(immediate); finishTurn(); return; }
+            if (targetRoyal && immediate) {
+                if (wouldPromote(immediate)) {
+                    showPromoDialog(immediate, turn, immediate.to[0], immediate.to[1], m => { commitMove(m); finishTurn(); });
+                } else { commitMove(immediate); finishTurn(); }
+                return;
+            }
 
             if (matched.some(m => m.type === 'double')) {
                 startStep1Phase(selectedSq[0], selectedSq[1], r, c, matched);
                 return;
             }
-            commitMove(immediate);
-            finishTurn();
+            if (wouldPromote(immediate)) {
+                showPromoDialog(immediate, turn, immediate.to[0], immediate.to[1], m => { commitMove(m); finishTurn(); });
+            } else { commitMove(immediate); finishTurn(); }
             return;
         }
     }
@@ -1121,8 +1207,9 @@ function tryStay() {
     const m = step1State.candidates.find(x => x.type === 'double_end_here');
     if (!m) return;
     board = cloneBoard(step1State.savedBoard);
-    commitMove(m);
-    finishTurn();
+    if (wouldPromote(m)) {
+        showPromoDialog(m, turn, m.to[0], m.to[1], mv => { commitMove(mv); finishTurn(); });
+    } else { commitMove(m); finishTurn(); }
 }
 
 function handleStep2Click(r, c) {
@@ -1133,8 +1220,9 @@ function handleStep2Click(r, c) {
     if (!m) return;
 
     board = cloneBoard(step1State.savedBoard);
-    commitMove(m);
-    finishTurn();
+    if (wouldPromote(m)) {
+        showPromoDialog(m, turn, m.to[0], m.to[1], mv => { commitMove(mv); finishTurn(); });
+    } else { commitMove(m); finishTurn(); }
 }
 
 function finishTurn() {
@@ -1546,6 +1634,7 @@ function render() {
 function resetGame(fromRemote = false) {
     clearTimeout(aiTimer);
     aiThinking = false;
+    hidePromoDialog();
     $('aiStatus').textContent = '';
     initBoard();
     gameStateHistory = [];
@@ -1562,8 +1651,9 @@ function resetGame(fromRemote = false) {
 }
 
 function undoMove(fromRemote = false) {
-    if (aiThinking || gameStateHistory.length === 0) return;
+    if (aiThinking || gameStateHistory.length === 0 || promoCallback) return;
     if (step1State) cancelStep1();
+    hidePromoDialog();
     clearTimeout(aiTimer);
 
     let rec;
