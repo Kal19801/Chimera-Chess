@@ -768,11 +768,14 @@ function getRawPieceMoves(piece, r, c, b, ep) {
         for (const cs of getCastlingMoves(piece, r, c, b)) combined.push(cs);
     }
 
-    const seen = new Set();
+    const seen = new Map();
     return combined.filter(m => {
         const key = `${m.type || 'n'},${m.r},${m.c},${m.isCapture},${m.isFusion}`;
-        if (seen.has(key)) return false;
-        seen.add(key); return true;
+        if (seen.has(key)) {
+            if (m.isDoublePawn) seen.get(key).isDoublePawn = true;
+            return false;
+        }
+        seen.set(key, m); return true;
     });
 }
 
@@ -822,7 +825,7 @@ function executeSingleStep(b, fr, fc, tr, tc, isFusion, type, capturePos, rookFr
         promoted = true;
     }
 
-    b[tr][tc] = { color: p.color, comps, hasMoved: true };
+    b[tr][tc] = { color: p.color, comps, hasMoved: isFusion && dest ? !!dest.hasMoved : true };
     return { piece: b[tr][tc], promoted };
 }
 
