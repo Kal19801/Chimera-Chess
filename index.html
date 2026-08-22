@@ -226,7 +226,10 @@
     }
     .square.light, .demo-cell.light { background: var(--board-light); }
     .square.dark, .demo-cell.dark  { background: var(--board-dark); }
-    .square.selected, .demo-cell.selected  { background: var(--sel) !important; }
+    .square.selected, .demo-cell.selected  { 
+        background: var(--sel) !important; 
+        z-index: 10; /* 关键：让正在飞行的起始格浮在所有其他格子背景之上 */
+    }
     .square.last-from, .demo-cell.last-from { background: var(--last-from) !important; }
     .square.last-to, .demo-cell.last-to   { background: var(--last-to) !important; }
     .square.last-mid, .demo-cell.last-mid  { background: var(--last-mid) !important; }
@@ -599,7 +602,6 @@
     .demo-cell {
         min-width: 0;
         min-height: 0;
-        overflow: hidden;
     }
     .rule-demo-caption {
         background: var(--panel);
