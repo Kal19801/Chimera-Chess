@@ -3237,14 +3237,14 @@ const RULEBOOK_MARKUP = {
 - **奇美拉**：只能吃掉比自身所有成分中**最低价值更高**的单成分友方。
 - 合并后奇美拉只会保留并拥有池中价值最高的两个成分。
 - 奇美拉和奇美拉之间无法融合
-[demo rows=4 cols=5 pieces="3,1,w,Q;3,2,w,N;1,3,b,P" anim="3,1>3,2|3,2>1,3" label="Q与N合成为QN，以马的攻击模式吃子"]
+[demo rows=4 cols=5 pieces="3,1,w,Q;3,2,w,N;0,3,b,P" anim="3,1>3,2|0,3>1,3|3,2>1,3" label="Q与N合成为QN，以马的攻击模式吃子"]
 
 [tab:二次行动]
 # 双组件二次行动
 当奇美拉的两个独立成分均能合法抵达同一个目标格时（棋盘上显示绿色双环标记），该棋子获得二次行动：
 - 第一步抵达该中继格，随后可**立即执行第二步**。
 - 支持"走+走"、"走+吃"、"吃+走"；**禁止连续吃两个敌子**。
-[demo rows=5 cols=6 pieces="4,1,w,Q,R;2,3,b,N;4,4,b,P" anim="4,1>4,3|4,3>2,3" label="QR走中继格，二段行动折角吃子"]
+[demo rows=5 cols=6 pieces="4,1,w,K,B;2,4,b,N;3,2,b,P" anim="4,1>3,2>2,2|2,4>3,2" label="KB走二段行动折角吃子"]
 
 [tab:斩首规则]
 # 王权斩首与将死判定
@@ -3412,41 +3412,48 @@ function renderInteractiveRuleDemo(tagLine, container) {
     if (!_animMatch) { buildDemoState(); return; }
     const animStr = _animMatch[1];
 
-    // 有 anim 时渲染带重播按钮的 caption，并启动动画循环
+    // 显式解析：A>B>C 显式声明同回合二段行动；| 分割代表多回合分步演示
+    function parseAnimSteps(str) {
+        const steps = [];
+        str.split('|').forEach(part => {
+            const coords = part.split('>').map(s => s.trim()).filter(Boolean);
+            if (coords.length === 3) {
+                // 显式三坐标：同回合二段行动 (起点 > 中继点 > 终点)
+                steps.push({ from: coords[0], to: coords[1], isKineticPart1: true });
+                steps.push({ from: coords[1], to: coords[2], isKineticPart2: true });
+            } else if (coords.length === 2) {
+                // 独立单步行动
+                steps.push({ from: coords[0], to: coords[1] });
+            }
+        });
+        return steps;
+    }
+
     const caption = document.createElement('div');
     caption.className = 'rule-demo-caption';
     caption.innerHTML = `<span>${label}</span><button class="secondary replay-btn" style="padding:1px 6px;font-size:0.72rem;">${t('replayAnim')}</button>`;
-    if (label) {
-        // 替换之前已添加的纯文本 caption
-        wrap.lastChild.remove();
-    }
+    if (label) wrap.lastChild.remove();
     wrap.appendChild(caption);
 
     let loopTimer = null;
-    let kineticActive = false;
-    let kineticSourceCell = null;
-    let kineticMidCell = null;
 
     function playDemoLoop() {
         clearTimeout(loopTimer);
         const myGen = ruleDemoGen;
         const cells = buildDemoState();
-        const steps = animStr.split('|');
-
-        kineticActive = false;
-        kineticSourceCell = null;
-        kineticMidCell = null;
+        const steps = parseAnimSteps(animStr);
 
         let stepIndex = 0;
         function runNextStep() {
             if (myGen !== ruleDemoGen) return;
             if (stepIndex >= steps.length) {
-                loopTimer = setTimeout(playDemoLoop, 1800);
+                loopTimer = setTimeout(playDemoLoop, 2000);
                 return;
             }
-            const [fromStr, toStr] = steps[stepIndex].split('>');
-            const [fr, fc] = fromStr.split(',').map(Number);
-            const [tr, tc] = toStr.split(',').map(Number);
+
+            const curStep = steps[stepIndex];
+            const [fr, fc] = curStep.from.split(',').map(Number);
+            const [tr, tc] = curStep.to.split(',').map(Number);
 
             const sourceCell = cells[fr][fc];
             const targetCell = cells[tr][tc];
@@ -3458,45 +3465,34 @@ function renderInteractiveRuleDemo(tagLine, container) {
                 return;
             }
 
-            const srcComps = pieceEl.getAttribute('data-comps').split(',');
-            const isChimera = srcComps.length > 1;
-            const targetPiece = targetCell.querySelector('.piece');
-            const isMidStep = stepIndex < steps.length - 1;
-            const isKineticMid = isChimera && !targetPiece && isMidStep;
-            const completingKinetic = kineticActive && !isKineticMid;
-
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    const cell = cells[r][c];
-                    if (completingKinetic && (cell === kineticSourceCell || cell === kineticMidCell)) continue;
-                    cell.classList.remove('last-from', 'last-to', 'last-mid', 'mid-path');
+            // 若不是二段动作的第二段，清理上一回合的轨迹
+            if (!curStep.isKineticPart2) {
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cols; c++) {
+                        cells[r][c].classList.remove('last-from', 'last-to', 'last-mid', 'mid-path');
+                    }
                 }
             }
+
+            // 清理即时指示器
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
                     cells[r][c].classList.remove('selected', 'move-target', 'capture-target', 'fusion-target', 'overlap-target');
                 }
             }
 
-            if (isKineticMid) {
-                kineticActive = true;
-                kineticSourceCell = sourceCell;
-                kineticMidCell = targetCell;
-            } else if (!completingKinetic) {
-                kineticActive = false;
-            }
-
             sourceCell.classList.add('selected');
+            const targetPiece = targetCell.querySelector('.piece');
+            const isFriendly = targetPiece && (targetPiece.getAttribute('data-color') === pieceEl.getAttribute('data-color'));
 
-            if (targetPiece) {
-                const pColor = targetPiece.getAttribute('data-color');
-                const srcColor = pieceEl.getAttribute('data-color');
-                if (pColor === srcColor) targetCell.classList.add('fusion-target');
-                else targetCell.classList.add('capture-target');
-            } else if (isKineticMid) {
-                targetCell.classList.add('overlap-target');
+            if (isFriendly) {
+                targetCell.classList.add('fusion-target'); // 友军合成：显示 '+'
+            } else if (curStep.isKineticPart1) {
+                targetCell.classList.add('overlap-target'); // 显式二段第1段：显示蓝色双圈
+            } else if (targetPiece) {
+                targetCell.classList.add('capture-target'); // 敌军吃子：显示吃子圈
             } else {
-                targetCell.classList.add('move-target');
+                targetCell.classList.add('move-target'); // 普通走空格
             }
 
             setTimeout(() => {
@@ -3510,33 +3506,30 @@ function renderInteractiveRuleDemo(tagLine, container) {
                     sourceCell.classList.remove('selected');
                     targetCell.classList.remove('move-target', 'capture-target', 'fusion-target', 'overlap-target');
 
-                    if (isKineticMid) {
+                    // 轨迹着色
+                    if (curStep.isKineticPart1) {
                         sourceCell.classList.add('last-from');
-                        targetCell.classList.add('last-mid', 'mid-path');
-                    } else if (completingKinetic) {
-                        targetCell.classList.add('last-to');
-                        kineticActive = false;
+                        targetCell.classList.add('last-mid', 'mid-path'); // 二段中继点加青色常亮圈
+                    } else if (curStep.isKineticPart2) {
+                        targetCell.classList.add('last-to'); // 二段终点加绿色高亮
                     } else {
                         sourceCell.classList.add('last-from');
                         targetCell.classList.add('last-to');
                     }
 
-                    if (targetPiece) {
-                        const pColor = targetPiece.getAttribute('data-color');
-                        const srcColor = pieceEl.getAttribute('data-color');
-                        if (pColor === srcColor) {
-                            const srcComps = pieceEl.getAttribute('data-comps').split(',');
-                            const tgtComps = targetPiece.getAttribute('data-comps').split(',');
-                            const merged = fuseComponents({ comps: srcComps }, { comps: tgtComps });
-                            pieceEl.setAttribute('data-comps', merged.join(','));
-                            let badge = pieceEl.querySelector('.badge');
-                            if (!badge) {
-                                badge = document.createElement('div');
-                                badge.className = 'badge';
-                                pieceEl.appendChild(badge);
-                            }
-                            badge.textContent = merged.join('+');
+                    // 合成进化处理
+                    if (targetPiece && isFriendly) {
+                        const srcComps = pieceEl.getAttribute('data-comps').split(',');
+                        const tgtComps = targetPiece.getAttribute('data-comps').split(',');
+                        const merged = fuseComponents({ comps: srcComps }, { comps: tgtComps });
+                        pieceEl.setAttribute('data-comps', merged.join(','));
+                        let badge = pieceEl.querySelector('.badge');
+                        if (!badge) {
+                            badge = document.createElement('div');
+                            badge.className = 'badge';
+                            pieceEl.appendChild(badge);
                         }
+                        badge.textContent = merged.join('+');
                     }
 
                     targetCell.innerHTML = '';
@@ -3545,16 +3538,15 @@ function renderInteractiveRuleDemo(tagLine, container) {
                     pieceEl.style.zIndex = '2';
 
                     if (myGen !== ruleDemoGen) return;
+
+                    // 音效处理
                     if (targetPiece) {
-                        const pColor = targetPiece.getAttribute('data-color');
-                        const srcColor = pieceEl.getAttribute('data-color');
-                        if (pColor === srcColor) {
-                            sfx.fusion();
-                        } else {
-                            sfx.capture();
-                        }
-                    } else if (isKineticMid) {
+                        if (isFriendly) sfx.fusion();
+                        else sfx.capture();
+                    } else if (curStep.isKineticPart1) {
                         sfx.step1();
+                    } else if (curStep.isKineticPart2) {
+                        sfx.doubleStep();
                     } else {
                         sfx.move();
                     }
