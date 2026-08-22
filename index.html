@@ -3253,34 +3253,107 @@ const RULEBOOK_MARKUP = {
 - **斩首结局**：一旦敌王被斩杀，游戏立即结束并宣告胜利。
 - 同时仍然可以以经典的将死方式完成胜利
 `,
-    'en': `
-[tab:Basics]
+
+'en': `
+[tab:Basic Rules]
 # Chimera Board & Component System
-Chimera Chess is played on a **12×8** rectangular battlefield. Each side starts with 20 pieces.
-- Pieces include single-component units (**P, N, B, R, Q, K**) and fused dual-component Chimera composites (**QN, BR, QK**, etc.).
-- The legal value hierarchy of components is:
-> **P (1) < N (3) = B (3) < R (5) < Q (9) < K (100)**
+Chimera Chess is played on a **12×8** extended board. Each side starts with 20 pieces.
+[demo rows=8 cols=12 pieces="0,0,b,P;0,1,b,R;0,2,b,N;0,3,b,B;0,4,b,Q;0,5,b,P;0,6,b,P;0,7,b,K;0,8,b,B;0,9,b,N;0,10,b,R;0,11,b,P;1,0,b,P;1,1,b,P;1,2,b,P;1,3,b,P;1,4,b,P;1,5,b,P;1,6,b,P;1,7,b,P;1,8,b,P;1,9,b,P;1,10,b,P;1,11,b,P;6,0,w,P;6,1,w,P;6,2,w,P;6,3,w,P;6,4,w,P;6,5,w,P;6,6,w,P;6,7,w,P;6,8,w,P;6,9,w,P;6,10,w,P;6,11,w,P;7,0,w,P;7,1,w,R;7,2,w,N;7,3,w,B;7,4,w,Q;7,5,w,P;7,6,w,P;7,7,w,K;7,8,w,B;7,9,w,N;7,10,w,R;7,11,w,P" label="Chimera Chess Initial Board"]
+- Pieces consist of single-component units (**P, N, B, R, Q, K**) and dual-component Chimera compounds (**QN, BR, QK**, etc.).
+- The official component value hierarchy is:
+>  P < N = B < R < Q < K 
+- **All rules not explicitly specified follow standard international chess.**
 
-[tab:Fusion]
-# Friendly Fusion & Devour Rules
-A piece may trigger fusion evolution by moving onto a friendly piece's square:
-- **Single-component piece**: may devour any friendly single-component piece of strictly lower value.
-- **Chimera composite**: may only devour a friendly single-component piece whose value exceeds the **lowest-valued** component it already contains.
-- After merging, the two highest-valued components from the combined pool are retained.
-[demo rows=4 cols=5 pieces="3,1,w,Q;3,2,w,N;1,3,b,P" anim="3,1>3,2|3,2>1,3" label="Q devours friendly N to form QN, then slays the enemy pawn"]
+[tab:Fusion & Upgrade]
+# Friendly Fusion & Absorption Rules
+A piece can merge into a Chimera by moving onto a friendly piece's square:
+- **Simple Pieces**: May capture and fuse with friendly single-component pieces of strictly lower value.
+- **Chimera Compounds**: Can only absorb friendly single-component pieces of value **strictly higher than its lowest component**, replacing that component (e.g., QP + N = QN). Through this replacement or promotion, you can create otherwise non-fusible combinations such as QQ, BB, NN, and NB.
+- A merged Chimera only retains the two **highest-value** components in the pool.
+- Fusion between two Chimera compounds is prohibited.
+[demo rows=4 cols=5 pieces="3,1,w,Q;3,2,w,N;0,3,b,P" anim="3,1>3,2|0,3>1,3|3,2>1,3" label="Q and N fuse into QN, capturing via Knight pattern"]
 
-[tab:Kinetic Step]
-# Dual-Component Resonance (Two-Step Action)
-When a Chimera's two independent components can both legally reach the same target square (shown on board as a green double-ring marker), the piece gains a **Kinetic Momentum** burst:
-- The first step reaches the relay square, then a **second step** may be executed immediately (turning or zigzagging is allowed).
-- Permitted: "move+move", "move+capture", "capture+move"; **capturing two enemies in a row is forbidden**.
-[demo rows=5 cols=6 pieces="4,1,w,Q,R;2,3,b,N;4,4,b,P" anim="4,1>4,3|4,3>2,3" label="QR resonates straight to the relay square, second step zigzags to slay the enemy knight"]
+[tab:Double Action]
+# Dual-Component Double Action
+When both independent components of a Chimera can legally reach the same destination square (marked by teal double rings on the board), the piece gains a Double Action:
+- Move 1 reaches the relay square, followed by an **immediate second move**.
+- Supports "Move+Move", "Move+Capture", and "Capture+Move"; **capturing two enemy pieces in succession is prohibited**.
+[demo rows=5 cols=6 pieces="4,1,w,K,B;2,4,b,N;3,2,b,P" anim="4,1>3,2>2,2|2,4>3,2" label="KB executes double action with an angled capture"]
 
-[tab:Royalty & End]
+[tab:Decapitation]
 # Royal Decapitation & Checkmate
-- **Royal Decapitation**: **Only a piece containing K may actively capture an enemy piece containing K**.
-- **Safety Rule**: The final landing square of a K-containing piece (single-step or two-step) must be absolutely safe (not attacked by the enemy).
-- **Decapitation Victory**: Once the enemy king is legally slain, the game ends immediately and victory is declared!
+- **Royal Prerogative**: **Only pieces containing the K component can capture an enemy King (piece containing K)**.
+- **Safety Rule**: The final destination of a King-bearing piece (single step or double leap) must be a safe square (not under enemy attack).
+- **Decapitation Victory**: Once the enemy King is captured, the game ends immediately with a victory.
+- Classic checkmate also remains a valid victory condition.
+`,
+
+    'fr': `
+[tab:Règles de base]
+# Échiquier Chimère & Système de Composants
+Les Échecs Chimère se jouent sur un échiquier étendu de **12×8**. Chaque camp dispose initialement de 20 pièces.
+[demo rows=8 cols=12 pieces="0,0,b,P;0,1,b,R;0,2,b,N;0,3,b,B;0,4,b,Q;0,5,b,P;0,6,b,P;0,7,b,K;0,8,b,B;0,9,b,N;0,10,b,R;0,11,b,P;1,0,b,P;1,1,b,P;1,2,b,P;1,3,b,P;1,4,b,P;1,5,b,P;1,6,b,P;1,7,b,P;1,8,b,P;1,9,b,P;1,10,b,P;1,11,b,P;6,0,w,P;6,1,w,P;6,2,w,P;6,3,w,P;6,4,w,P;6,5,w,P;6,6,w,P;6,7,w,P;6,8,w,P;6,9,w,P;6,10,w,P;6,11,w,P;7,0,w,P;7,1,w,R;7,2,w,N;7,3,w,B;7,4,w,Q;7,5,w,P;7,6,w,P;7,7,w,K;7,8,w,B;7,9,w,N;7,10,w,R;7,11,w,P" label="Échiquier initial des Échecs Chimère"]
+- Les pièces comprennent des pièces simples (**P, N, B, R, Q, K**) et des composés Chimère à deux composants (**QN, BR, QK**, etc.).
+- L'échelle de valeur officielle des composants est :
+>  P < N = B < R < Q < K 
+- **Toutes les règles non mentionnées sont strictement identiques aux échecs classiques.**
+
+[tab:Fusion & Évolution]
+# Règles de Fusion et d'Absorption Alliée
+Une pièce peut fusionner en se déplaçant sur la case d'une pièce alliée :
+- **Pièces simples** : Peuvent capturer et fusionner avec une pièce simple alliée de valeur strictement inférieure.
+- **Chimères** : Ne peuvent absorber qu'une pièce simple alliée de valeur **strictement supérieure à leur composant le plus faible**, en remplaçant ce dernier (ex. QP + N = QN). Ce mécanisme ou la promotion permet de forger des combinaisons spéciales (QQ, BB, NN, NB).
+- La Chimère ne conserve que les deux composants de plus **haute valeur** du groupe.
+- La fusion entre deux Chimères est interdite.
+[demo rows=4 cols=5 pieces="3,1,w,Q;3,2,w,N;0,3,b,P" anim="3,1>3,2|0,3>1,3|3,2>1,3" label="Q et N fusionnent en QN, capturant selon le Cavalier"]
+
+[tab:Action Double]
+# Action Double Cinétique
+Lorsque les deux composants d'une Chimère peuvent légalement atteindre la même case (marquée d'un double anneau bleu-vert sur l'échiquier), elle obtient une Action Double :
+- Premier coup vers la case relais, suivi d'un **second coup immédiat**.
+- Permet « Déplacement+Déplacement », « Déplacement+Capture », « Capture+Déplacement » ; **interdiction de capturer deux pièces ennemies consécutivement**.
+[demo rows=5 cols=6 pieces="4,1,w,K,B;2,4,b,N;3,2,b,P" anim="4,1>3,2>2,2|2,4>3,2" label="KB effectue une action double avec capture en angle"]
+
+[tab:Décapitation]
+# Décapitation Royale & Échec et Mat
+- **Pouvoir Royal** : **Seules les pièces contenant le composant K peuvent capturer un Roi adverse (pièce contenant K)**.
+- **Règle de sécurité** : La case d'arrivée finale d'une pièce royale (coup simple ou double saut) doit être sécurisée (hors d'attaque ennemie).
+- **Victoire par décapitation** : La capture du Roi adverse entraîne la victoire immédiate.
+- La victoire par échec et mat classique reste également valable.
+`,
+
+    'ru': `
+[tab:Основные правила]
+# Доска Химер и Система Компонентов
+Химерные шахматы используют расширенную доску **12×8**. В начале у каждой стороны по 20 фигур.
+[demo rows=8 cols=12 pieces="0,0,b,P;0,1,b,R;0,2,b,N;0,3,b,B;0,4,b,Q;0,5,b,P;0,6,b,P;0,7,b,K;0,8,b,B;0,9,b,N;0,10,b,R;0,11,b,P;1,0,b,P;1,1,b,P;1,2,b,P;1,3,b,P;1,4,b,P;1,5,b,P;1,6,b,P;1,7,b,P;1,8,b,P;1,9,b,P;1,10,b,P;1,11,b,P;6,0,w,P;6,1,w,P;6,2,w,P;6,3,w,P;6,4,w,P;6,5,w,P;6,6,w,P;6,7,w,P;6,8,w,P;6,9,w,P;6,10,w,P;6,11,w,P;7,0,w,P;7,1,w,R;7,2,w,N;7,3,w,B;7,4,w,Q;7,5,w,P;7,6,w,P;7,7,w,K;7,8,w,B;7,9,w,N;7,10,w,R;7,11,w,P" label="Начальная расстановка Химерных шахмат"]
+- Фигуры делятся на простые (**P, N, B, R, Q, K**) и двухкомпонентные составные Химеры (**QN, BR, QK** и др.).
+- Официальная иерархия ценности компонентов:
+>  P < N = B < R < Q < K 
+- **Все остальные правила полностью соответствуют классическим международным шахматам.**
+
+[tab:Слияние и замена]
+# Правила Слияния и Поглощения Союзников
+Фигура может сливаться в Химеру, наступая на клетку союзной фигуры:
+- **Простые фигуры**: могут поглощать союзные простые фигуры строго меньшей ценности.
+- **Химеры**: могут поглощать только союзные простые фигуры ценностью **строго выше наименьшего компонента Химеры**, заменяя этот компонент (например, QP + N = QN). Это позволяет создавать нестандартные сочетания: QQ, BB, NN и NB.
+- Химера сохраняет только два самых **ценных** компонента.
+- Слияние между двумя Химерами запрещено.
+[demo rows=4 cols=5 pieces="3,1,w,Q;3,2,w,N;0,3,b,P" anim="3,1>3,2|0,3>1,3|3,2>1,3" label="Q и N сливаются в QN, взятие по схеме Коня"]
+
+[tab:Двойной ход]
+# Кинетический Двойной Ход
+Когда оба независимых компонента Химеры могут легально достичь одного и того же поля (отмечено сине-зелёными двойными кольцами), фигура получает Двойной Ход:
+- Шаг 1 на промежуточное поле, за которым следует **немедленный второй шаг**.
+- Разрешено: «ход+ход», «ход+взятие», «взятие+ход»; **запрещено брать две вражеские фигуры подряд**.
+[demo rows=5 cols=6 pieces="4,1,w,K,B;2,4,b,N;3,2,b,P" anim="4,1>3,2>2,2|2,4>3,2" label="KB выполняет двойной ход с угловым взятием"]
+
+[tab:Обезглавливание]
+# Королевское Обезглавливание и Мат
+- **Королевское Право**: **Только фигуры с компонентом K могут брать вражеского Короля (фигуру с компонентом K)**.
+- **Правило безопасности**: Конечное поле королевской фигуры (одиночный ход или двойной прыжок) должно быть безопасным (не под боем).
+- **Победа обезглавливанием**: Взятие вражеского Короля приносит мгновенную победу.
+- Классический мат также остаётся полноценным условием победы.
 `
 };
 
